@@ -34,6 +34,7 @@ def snapshot_report():
         csv_writer = csv.writer(csv_file, delimiter=',',
                                 quotechar='"', quoting=csv.QUOTE_MINIMAL)
         csv_writer.writerow([
+            'region',
             'id',
             'volume_id',
             'volume_exists',
@@ -48,6 +49,7 @@ def snapshot_report():
             ec2 = boto3.client('ec2', region_name=region)
             for snapshot in get_snapshots():
                 csv_writer.writerow([
+                    region,
                     snapshot['id'],
                     snapshot['volume_id'],
                     snapshot['volume_exists'],
@@ -58,6 +60,43 @@ def snapshot_report():
                     str(snapshot['size']) + 'gb',
                     str(snapshot['start_time']),
                     snapshot['description']])
+
+
+@cli.command()
+def volume_report():
+    '''
+    give a report on all volumes
+    '''
+    global ec2
+    with open('volume_report.csv', 'w') as csv_file:
+        csv_writer = csv.writer(csv_file, delimiter=',',
+                                quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        csv_writer.writerow([
+            'region',
+            'id',
+            'Volume Type',
+            'Status',
+            'Size',
+            'Snapshot ID',
+            'Snapshot Exists',
+            'Created',
+            'Attachment Instance ID'
+        ])
+        for region in regions:
+            ec2 = boto3.client('ec2', region_name=region)
+            for volume in get_all_volumes():
+                csv_writer.writerow([
+                    region,
+                    volume['id'],
+                    volume['volume_type'],
+                    volume['status'],
+                    volume['size'],
+                    volume['snapshotId'],
+                    str(snapshot_exists(volume['instanceId'])),
+                    str(volume['create_time']),
+                    volume['instanceId']
+                ])
+                
 
 @cli.command()
 def snapshot_cleanup():
@@ -166,6 +205,22 @@ def get_available_volumes():
             'snapshot_exists': str(snapshot_exists(volume['SnapshotId'])),
             'tags': OrderedDict(sorted([(tag['Key'], tag['Value']) for tag in volume['Tags']])),
         }
+
+def get_all_volumes():
+    '''
+    get all volumes in any state
+    '''
+    for volume in ec2.describe_volumes()['Volumes']:
+        yield {
+            'id': volume['VolumeId'],
+            'volume_type': volume['VolumeType'],
+            'status': volume['State'],
+            'size': volume['Size'],
+            'snapshotId': volume['SnapshotId'],
+            'instanceId': volume['Attachments'][0]['InstanceId'],
+            'create_time': volume['CreateTime']
+        }
+
 
 
 def snapshot_exists(snapshot_id):
