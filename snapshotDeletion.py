@@ -99,6 +99,18 @@ def volume_report():
                 
 
 @cli.command()
+def ami_report():
+    '''
+    get all amis and get a report on them
+    '''
+
+    global ec2
+    with open('ami_report.csv', 'w') as csv_file:
+        csv_writer = csv.writer(csv_file, delimiter=',',
+                                quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        
+
+@cli.command()
 def snapshot_cleanup():
     '''
     Find and delete unreferenced snapshots.
@@ -221,7 +233,18 @@ def get_all_volumes():
             'create_time': volume['CreateTime']
         }
 
-
+def get_all_images():
+    '''
+    get all amis
+    '''
+    for image in ec2.describe_images(Owners=['self'])['Images']:
+        yield{
+            'id': image['ImageId'],
+            'create_time': image['CreationDate'],
+            'location': image['ImageLocation'],
+            'status': image['State'],
+            'status_reason': image['StateReason']
+        }
 
 def snapshot_exists(snapshot_id):
     if not snapshot_id:
