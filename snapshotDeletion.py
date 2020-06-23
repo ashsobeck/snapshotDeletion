@@ -96,7 +96,40 @@ def volume_report():
                     str(volume['create_time']),
                     volume['instanceId']
                 ])
-                
+
+
+@cli.command()
+def ami_report():
+    '''
+    get all amis and get a report on them
+    '''
+
+    global ec2
+    with open('ami_report.csv', 'w') as csv_file:
+        csv_writer = csv.writer(csv_file, delimiter=',',
+                                quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        csv_writer.writerow([
+            'region',
+            'id',
+            'location',
+            'status',
+            'snapshot id',
+            'delete on termination',
+            'create time'
+        ])
+        for region in regions:
+            ec2 = boto3.client('ec2', region_name=region)
+            for image in get_all_images():
+                csv_writer.writerow([
+                    region,
+                    image['id'],
+                    image['location'],
+                    image['status'],
+                    image['snapshot_id'],
+                    image['delete_on_termination'],
+                    image['create_time']
+                ])
+
 
 @cli.command()
 def snapshot_cleanup():
@@ -206,6 +239,7 @@ def get_available_volumes():
             'tags': OrderedDict(sorted([(tag['Key'], tag['Value']) for tag in volume['Tags']])),
         }
 
+
 def get_all_volumes():
     '''
     get all volumes in any state
@@ -221,6 +255,20 @@ def get_all_volumes():
             'create_time': volume['CreateTime']
         }
 
+
+def get_all_images():
+    '''
+    get all amis
+    '''
+    for image in ec2.describe_images(Owners=['self'])['Images']:
+        yield{
+            'id': image['ImageId'],
+            'create_time': image['CreationDate'],
+            'location': image['ImageLocation'],
+            'status': image['State'],
+            'snapshot_id': image['BlockDeviceMappings'][0]['Ebs']['SnapshotId'],
+            'delete_on_termination': image['BlockDeviceMappings'][0]['Ebs']['DeleteOnTermination']
+        }
 
 
 def snapshot_exists(snapshot_id):
