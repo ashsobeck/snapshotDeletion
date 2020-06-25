@@ -114,6 +114,7 @@ def ami_report():
             'location',
             'status',
             'snapshot id',
+            'snapshot exists?',
             'delete on termination',
             'create time'
         ])
@@ -126,6 +127,7 @@ def ami_report():
                     image['location'],
                     image['status'],
                     image['snapshot_id'],
+                    str(snapshot_exists(image['snapshot_id'])),
                     image['delete_on_termination'],
                     image['create_time']
                 ])
